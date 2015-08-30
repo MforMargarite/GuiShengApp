@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:fitsSystemWindows="true">
+<ScrollView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f4f4f4"
+    >
+    <RelativeLayout android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/body"
+            android:background="#ffffff"
+        />
+    <RelativeLayout
+        android:layout_below="@+id/body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#ffffff"
+        android:layout_marginBottom="24dp"
+        android:id="@+id/button_area">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginRight="16dp"
+            android:background="#eeeeee"
+            android:layout_marginLeft="16dp"
+            android:id="@+id/underline"
+            />
+        <ImageButton android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/comment"
+            android:background="@drawable/sub_button"
+            android:id="@+id/comment"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:layout_margin="16dp"
+            android:layout_toStartOf="@+id/like"/>
+        <ImageButton android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/unlike"
+            android:id="@+id/like"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="7dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginRight="16dp"
+            android:background="@drawable/sub_button"
+            android:layout_alignParentRight="true"/>
+    </RelativeLayout>
+
+        <ImageView android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background= "@drawable/latest_comment_title"
+            android:layout_below="@+id/button_area"/>
+        <com.muxistudio.guishengapp.CommentListView
+            android:background="#ffffff"
+            android:id="@+id/comment_listview"
+            android:layout_below="@+id/button_area"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+ </RelativeLayout>
+
+    </ScrollView>
+    </LinearLayout>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    >
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/header_loading">
+<FrameLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:id="@+id/begin_refresh">
+    <TextView android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:text="下拉加载"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginLeft="16dp"
+        android:textColor="#999999"
+        />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:id="@+id/ready_to_refresh"
+        android:visibility="gone">
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="释放加载"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:layout_marginLeft="16dp"
+            android:textColor="#999999"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:id="@+id/refreshing"
+        android:visibility="gone">
+        <ProgressBar
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            />
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="加载中..."
+            android:textSize="18sp"
+            android:gravity="center"
+            android:layout_marginLeft="16dp"
+            android:textColor="#999999"
+            />
+    </LinearLayout>
+
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

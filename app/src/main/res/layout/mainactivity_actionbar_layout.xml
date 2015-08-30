@@ -1,0 +1,21 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#c73e3a"
+        android:id="@+id/title">
+        <ImageButton  android:id="@+id/logging"
+            android:layout_width="24dp"
+            android:layout_height="16dp"
+            android:background="@drawable/logging"
+            android:layout_margin="16dp"
+            />
+        <TextView  android:id="@+id/guisheng"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/guisheng"
+            android:textColor="#ffffff"
+            android:textSize="16sp"
+            android:layout_toEndOf="@+id/logging"
+            android:layout_marginTop="12dp"
+            android:layout_marginLeft="4dp"/>
+    </RelativeLayout>

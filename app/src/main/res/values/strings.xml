@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">GuiShengApp</string>
+    <string name="guisheng">华大桂声</string>
+    <string name="log_now">立即登录</string>
+    <string name="register">新用户注册</string>
+    <string name="err">无法连接到网络!</string>
+    <string name="is_newest">已是最新数据</string>
+    <string name="refresh_fail">更新失败</string>
+    <color name="guisheng_red">#CB4042</color>
+    <color name="dark_grey">#666666</color>
+    <color name="clicked">#bbbbbb</color>
+    <color name="after_click">#FFFFFF</color>
+
+</resources>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="304dp"
+    android:layout_height="256dp"
+    android:layout_centerHorizontal="true"
+    android:background="#EEEEEE"
+    >
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/dialog_title"
+        android:text="请选择头像来源..."
+        android:textSize="18dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="48dp"
+        android:textColor="#666666"/>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="40dp">
+        <Button
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:id="@+id/dialog_negative_button"
+            android:text="拍照"
+            android:textColor="#999999"
+            android:layout_marginTop="16dp"
+            android:background="#E8E8E8"/>
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:id="@+id/dialog_positive_button"
+            android:text="相册"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="16dp"
+            android:textColor="#999999"
+            android:background="#E8E8E8"/>
+    </LinearLayout>
+</LinearLayout>

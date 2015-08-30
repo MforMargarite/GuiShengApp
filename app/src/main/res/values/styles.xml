@@ -1,0 +1,12 @@
+<resources>
+        <!-- Base application theme. -->
+        <style name="AppTheme" parent="@android:style/Theme.Holo.Light">
+            <item name="android:actionBarStyle">@style/guisheng</item>
+            <!-- Customize your theme here. -->
+        </style>
+
+        <style name="guisheng" parent="@android:style/Widget.Holo.Light.ActionBar.Solid.Inverse">
+            <item name="android:background">#c73e3a</item>
+        </style>
+
+    </resources>

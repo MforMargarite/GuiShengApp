@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:padding="8dp">
+
+    <ImageView android:id="@+id/every_pic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/logging"
+        />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@+id/every_pic"
+        >
+        <ImageView android:id="@+id/every_date"
+            android:layout_weight = "1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:src = "@drawable/every_date"
+            android:scaleType="fitStart"
+            android:layout_alignLeft="@+id/every_pic"
+            />
+        <TextView
+            android:id="@+id/every_title"
+            android:layout_width="0dp"
+            android:layout_weight="11"
+            android:layout_height="wrap_content"
+            android:text="大梦初醒荒唐了一生"
+            android:layout_marginLeft="8dp"
+            />
+    </LinearLayout>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:background="#d8d8d8"/>
+</LinearLayout>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp">
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/pic"
+        android:layout_alignParentRight="true"
+        android:layout_alignBottom="@+id/time"
+        android:layout_alignTop="@+id/title"
+        android:layout_toRightOf="@+id/title"
+        android:layout_marginLeft="16dp"
+        android:src="@drawable/every_date"
+        />
+    <TextView
+        android:layout_width="208dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/title"
+        android:textSize="20sp"
+        android:text="标题就是要长常常常才能看出小小小小小果！"
+        android:textColor="#444444"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_below="@+id/title"
+        android:id="@+id/writer"
+        android:text="awww"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="24dp"
+        android:layout_alignBottom="@+id/writer"
+        android:layout_toRightOf="@+id/writer"
+        android:id="@+id/time"
+        android:text="07-24 "/>
+</RelativeLayout>
