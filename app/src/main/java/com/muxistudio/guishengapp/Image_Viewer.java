@@ -6,15 +6,15 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import java.io.InputStream;
 
-public class Headpic_Viewer extends Activity {
+public class Image_Viewer extends Activity {
     Bitmap bitmap ;
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -25,15 +25,16 @@ public class Headpic_Viewer extends Activity {
         headpic_layout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Headpic_Viewer.this.finish();
+                Image_Viewer.this.finish();
             }
         });
         ImageView headpic_viewer = (ImageView) findViewById(R.id.headpic_viewer);
         Intent intent = getIntent();
         bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unlog);
         try {
-            byte[] bytes = intent.getByteArrayExtra("headpic");
-            bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length);
+            Bundle bundle = intent.getExtras();
+            Uri imgUri = (Uri) bundle.get("headpic");
+            bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(),imgUri);
         }catch(Exception e){
             e.printStackTrace();
         }

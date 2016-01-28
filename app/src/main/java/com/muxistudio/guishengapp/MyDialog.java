@@ -3,6 +3,7 @@ package com.muxistudio.guishengapp;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -11,17 +12,17 @@ import android.widget.Button;
 
 public class MyDialog extends Dialog implements View.OnClickListener{
     private Button positive_button,negative_button;
-    private ChangeNameDialogListener listener;
+    private MyDialogListener listener;
     @Override
     public void onClick(View v) {
-        listener.onClick(v);
+       listener.onClick(v);
     }
 
-    public interface ChangeNameDialogListener{
+    public interface MyDialogListener {
          void onClick(View v);
     }
 
-    MyDialog(Context context, int n, ChangeNameDialogListener listener)
+    MyDialog(Context context, int n, MyDialogListener listener)
     {
         super(context);
         this.listener=listener;

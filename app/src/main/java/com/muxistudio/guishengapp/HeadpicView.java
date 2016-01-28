@@ -5,6 +5,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PointF;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -22,9 +25,11 @@ public class HeadpicView extends ImageView{
     public int pic_width,pic_height;
     public int parent_width,parent_height;
     int count,status;
-    float _width,_height;
-    float values[];
+    float values[],points[];
+    RectF srcRect,dstRect;
+    public RectF circleRect;
     public static Bitmap bitmap;
+
 
     public HeadpicView(Context context){
         super(context);
@@ -35,6 +40,8 @@ public class HeadpicView extends ImageView{
         count = 0;
         status = 1;
         values = new float[9];
+        points = new float[4];
+        float scale=1;
         setLongClickable(true);
         multiplyTouchesListener = new ScaleGestureDetector(context, new MultiplyTouchesListener());
         singleTouchListener = new GestureDetector(context, new SingleTouchListener());
@@ -46,17 +53,12 @@ public class HeadpicView extends ImageView{
             is.close();
             pic_width = options.outWidth;
             pic_height = options.outHeight;
-            parent_width = context.getResources().getDisplayMetrics().widthPixels;
-            parent_height = 10*context.getResources().getDisplayMetrics().heightPixels/11;
-            float scale = (float)pic_width/800;
-            scale = (float)pic_height/800>scale?(float)pic_height/parent_height:scale;
-            if(scale<1f)
-                scale = 1f;
-            else if(scale<3f)
-                scale = 2f;
+            float size = (float)pic_width/800;
+            if(size<1f)
+                size = 1;
             else
-                scale = 4f;
-            options.inSampleSize = (int)scale;
+                size = 2;
+            options.inSampleSize = (int)size;
             options.inJustDecodeBounds = false;
             options.inMutable = true;
             is = context.getContentResolver().openInputStream(uri);
@@ -68,10 +70,10 @@ public class HeadpicView extends ImageView{
             e.printStackTrace();
         }
         matrix = new Matrix();
-        matrix.postScale((float) parent_width / pic_width, (float) parent_width / pic_width);
-        if(parent_height>pic_height)
-           matrix.postTranslate(0, 0.5f * (parent_height - pic_height*(float)parent_width / pic_width));
         current_matrix = null;
+        srcRect = new RectF(0,0,bitmap.getWidth(),bitmap.getHeight());
+        matrix.postTranslate((Api.screen_width-pic_width)/2,(Api.screen_height-pic_height)/2);
+        dstRect = new RectF();
     }
 
     @Override
@@ -79,22 +81,11 @@ public class HeadpicView extends ImageView{
             canvas.save();
             canvas.drawBitmap(bitmap, matrix, null);
             canvas.restore();
-    }
-
-    private void initWidthAndHeight() {
-            _width = parent_width;
-            _height = (float) parent_width * pic_height / pic_width + 0.5f * (parent_height - (float)pic_height*parent_width / pic_width);
-            if( _height < parent_height)
-                _height = parent_height;
-    }
+            }
 
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
-        if(count == 0) {
-            initWidthAndHeight();
-            count++;
-        }
         if(event.getPointerCount()>1)
             multiplyTouchesListener.onTouchEvent(event);
         else
@@ -109,42 +100,22 @@ public class HeadpicView extends ImageView{
             float offsetX = -distanceX;
             float offsetY = -distanceY;
             matrix.getValues(values);
-            if(values[Matrix.MSCALE_Y]>=(float)parent_height/pic_height){
-                if (offsetY + values[Matrix.MTRANS_Y] > 0)
-                    offsetY = -values[Matrix.MTRANS_Y];
-                else if (offsetY + values[Matrix.MTRANS_Y] < -(pic_height * values[Matrix.MSCALE_Y] - _height))
-                    offsetY = -(pic_height * values[Matrix.MSCALE_Y] - _height) - values[Matrix.MTRANS_Y];
-            if(values[Matrix.MSCALE_X]>=(float)parent_width/pic_width) {
-                if (offsetX + values[Matrix.MTRANS_X] > 0)
-                    offsetX = -values[Matrix.MTRANS_X];
-                else if (offsetX + values[Matrix.MTRANS_X] < -(pic_width * values[Matrix.MSCALE_X] - _width))
-                    offsetX = -(pic_width * values[Matrix.MSCALE_X] - _width)  - values[Matrix.MTRANS_X];
-                }else{
-                if (offsetX + values[Matrix.MTRANS_X] < 0)
-                    offsetX = -values[Matrix.MTRANS_X];
-                else if (offsetX + values[Matrix.MTRANS_X] > ( _width - pic_width * values[Matrix.MSCALE_X]))
-                    offsetX = ( _width - pic_width * values[Matrix.MSCALE_X]) - values[Matrix.MTRANS_X];
+            matrix.mapRect(dstRect, srcRect);
+            if (dstRect.contains(circleRect)) {
+                if(dstRect.left+offsetX>=(Api.screen_width-480*Api.scale)/ 2.0)//左边线出界
+                    offsetX = (float)((Api.screen_width-480*Api.scale)/ 2.0-dstRect.left);
+                else if(dstRect.right+offsetX<=(Api.screen_width+480*Api.scale)/ 2.0)
+                    offsetX = (float)((Api.screen_width+480*Api.scale)/ 2.0 - dstRect.right);
+                Log.i("what","上下"+parent_height+" "+Api.scale+(parent_height-480*Api.scale)/ 2.0+" "+dstRect.top+" "+offsetY+" "+dstRect.bottom);
+                Log.i("what","左右"+(Api.screen_width-480*Api.scale)/ 2.0+" "+dstRect.left+" "+offsetX+" "+dstRect.right);
+                if(dstRect.top+offsetY>=(parent_height-480*Api.scale)/ 2.0)//上边线出界
+                    offsetY = (float)((parent_height-480*Api.scale)/ 2.0 -dstRect.top);
+                else if(dstRect.bottom+offsetY<=(parent_height+480*Api.scale)/ 2.0)
+                    offsetY = (float)((parent_height+480*Api.scale)/ 2.0 - dstRect.bottom);
+                matrix.set(current_matrix);
+                matrix.postTranslate(offsetX, offsetY);
+                invalidate();
             }
-            }else{
-                if (offsetY + values[Matrix.MTRANS_Y] < 0)
-                    offsetY = -values[Matrix.MTRANS_Y];
-                else if (offsetY + values[Matrix.MTRANS_Y] > ( _height - pic_height * values[Matrix.MSCALE_Y]))
-                    offsetY = (_height - pic_height * values[Matrix.MSCALE_Y] ) - values[Matrix.MTRANS_Y];
-                if(values[Matrix.MSCALE_X]>=(float)parent_width/pic_width) {
-                    if (offsetX + values[Matrix.MTRANS_X] > 0)
-                        offsetX = -values[Matrix.MTRANS_X];
-                    else if (offsetX + values[Matrix.MTRANS_X] < -(pic_width * values[Matrix.MSCALE_X] - _width))
-                        offsetX = -(pic_width * values[Matrix.MSCALE_X] - _width) - values[Matrix.MTRANS_X];
-                }else{
-                    if (offsetX + values[Matrix.MTRANS_X] < 0)
-                        offsetX = -values[Matrix.MTRANS_X];
-                    else if (offsetX + values[Matrix.MTRANS_X] > ( _width - pic_width * values[Matrix.MSCALE_X]))
-                        offsetX = ( _width - pic_width * values[Matrix.MSCALE_X]) - values[Matrix.MTRANS_X];
-                }
-            }
-            matrix.set(current_matrix);
-            matrix.postTranslate(offsetX, offsetY);
-            invalidate();
             return true;
             }
 
@@ -178,7 +149,7 @@ public class HeadpicView extends ImageView{
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
             float max_scale = 4f;
-            float min_scale = 2*parent_width/(pic_width+480);
+            float min_scale = (480*Api.scale)/pic_width>(480*Api.scale)/pic_height?(480*Api.scale)/(float)pic_width:(480*Api.scale)/(float)pic_height;
             float scale_factor = detector.getScaleFactor();
             matrix.getValues(values);
             if(scale_factor*values[Matrix.MSCALE_X]>max_scale )
@@ -186,8 +157,11 @@ public class HeadpicView extends ImageView{
             if(scale_factor*values[Matrix.MSCALE_X]<min_scale)
                 scale_factor = min_scale/values[Matrix.MSCALE_X];
             matrix.postScale(scale_factor, scale_factor, detector.getFocusX(), detector.getFocusY());
-            current_matrix = matrix;
+            matrix.mapRect(dstRect,srcRect);
+            if(!dstRect.contains(circleRect))
+               matrix.postScale(1/scale_factor, 1/scale_factor, detector.getFocusX(), detector.getFocusY());
             invalidate();
+            current_matrix = matrix;
             return true;
         }
     }

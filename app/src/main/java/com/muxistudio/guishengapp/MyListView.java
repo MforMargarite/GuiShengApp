@@ -2,15 +2,34 @@ package com.muxistudio.guishengapp;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public class MyListView extends ListView implements AdapterView.OnItemClickListener{
@@ -30,24 +49,20 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
     boolean isPrepared = false;
     NetDataObtain netDataObtain;
     OnRefreshListener onRefreshListener;
-    public int which_tab=-1;
-
-    public MyListView(final Context context,AttributeSet attributeSet) {
+    ImageView bitmap;
+    public MyListView(Context context,AttributeSet attributeSet) {
         super(context, attributeSet);
-        this.context = context;
-        header_loading_view = LayoutInflater.from(context).inflate(R.layout.header_loading_view, null);
-        header_view = LayoutInflater.from(context).inflate(R.layout.headerview_layout, null);
-        footer_view = LayoutInflater.from(context).inflate(R.layout.footerview_layout, null);
+        header_loading_view = LayoutInflater.from(getContext()).inflate(R.layout.header_loading_view, null,false);
+        header_view = LayoutInflater.from(getContext()).inflate(R.layout.headerview_layout, null,false);
+        footer_view = LayoutInflater.from(getContext()).inflate(R.layout.footerview_layout, null,false);
         footer_loading = footer_view.findViewById(R.id.footer_loading);
         header_loading = header_loading_view.findViewById(R.id.header_loading);
-
         measureView(header_loading_view);
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         header_loading_view.invalidate();
         measureView(footer_view);
         footer_view.setPadding(0, -footer_view.getMeasuredHeight(), 0, 0);
         footer_view.invalidate();
-
         begin_refresh = header_loading_view.findViewById(R.id.begin_refresh);
         ready_to_refresh = header_loading_view.findViewById(R.id.ready_to_refresh);
         refreshing = header_loading_view.findViewById(R.id.refreshing);
@@ -57,20 +72,57 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
 
         setHeaderDividersEnabled(false);
         addHeaderView(header_loading_view);
+        initHeaderView(Integer.parseInt(getTag().toString()));
         addHeaderView(header_view);
         addFooterView(footer_view);
         setFooterDividersEnabled(false);
         setOnItemClickListener(MyListView.this);
         setOverScrollMode(OVER_SCROLL_NEVER);
-        netDataObtain = new NetDataObtain();
+        netDataObtain = new NetDataObtain(context);
     }
+
+
+    private void initHeaderView(int tag) {
+          HashMap<String, Object> map;
+         switch (tag) {
+             case 1:
+                 if (Api.original_current_id > 0)
+                     map = Api.original_list.get(0);
+                 else
+                     map = null;
+                 break;
+             case 2:
+                 if (Api.interact_current_id > 0)
+                     map = Api.interact_list.get(0);
+                 else
+                     map = null;
+                 break;
+             default:
+                 if (Api.news_current_id > 0) {
+                     map = Api.news_list.get(0);
+                 }else
+                     map = null;
+                 break;
+         }
+         if (map != null) {
+             TextView every_title = (TextView) header_view.findViewById(R.id.every_title);
+             every_title.setText(map.get("title").toString());
+             ImageView every_pic = (ImageView)header_view.findViewById(R.id.every_pic);
+             new ImageLoad().showHeaderImageByThread(every_pic, Api.image_api + map.get("image").toString());
+         } else {
+             TextView underline = (TextView) header_view.findViewById(R.id.underline);
+             underline.setBackgroundColor(getResources().getColor(R.color.white));
+             ImageView imageView = (ImageView) header_view.findViewById(R.id.title_icon);
+             imageView.setVisibility(GONE);
+         }
+     }
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Intent intent = new Intent(context,subActivity.class);
-        intent.putExtra("id", (int)id);
-        intent.putExtra("tab",which_tab);
-        context.startActivity(intent);
+        Intent intent = new Intent(getContext(),subActivity.class);
+        intent.putExtra("id", position);
+        intent.putExtra("tab", Integer.parseInt(getTag().toString()));
+        getContext().startActivity(intent);
     }
 
     private boolean prepareFooterView(){
@@ -112,7 +164,7 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
     }
 
     public void alreadyRefreshed(){
-        Toast.makeText(context,getResources().getText(R.string.is_newest),Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(),getResources().getText(R.string.is_newest),Toast.LENGTH_SHORT).show();
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
@@ -125,10 +177,11 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
         one_refresh_a_time=0;
+
     }
 
     public void refreshFail(){
-        Toast.makeText(context,getResources().getText(R.string.refresh_fail),Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(),getResources().getText(R.string.refresh_fail),Toast.LENGTH_SHORT).show();
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
@@ -211,6 +264,7 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
                 header_loading_view.setPadding(0,-header_loading_view.getMeasuredHeight(),0,0);
                 one_refresh_a_time = 0;
                 begin_refresh.setVisibility(View.GONE);
+                header_state = DONE;
                 break;
         case DONE:break;
         }
@@ -240,3 +294,4 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         this.onRefreshListener = onRefreshListener;
     }
 }
+

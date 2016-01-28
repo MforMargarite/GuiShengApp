@@ -1,6 +1,6 @@
 package com.muxistudio.guishengapp;
 
-import android.app.ActionBar;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,73 +9,114 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
-import android.support.v4.app.FragmentActivity;
+import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatButton;
+import android.support.v7.widget.Toolbar;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.widget.Button;
+import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 
-public class MainActivity extends FragmentActivity implements View.OnTouchListener {
-    ImageButton ToLogging;
-    int log_status = 1;
-    public static int status = 0;
-    public static int current_item = 0;
-    MyViewPager viewpager;
-    HeadpicImageView user_headpic;
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,AdapterView.OnItemClickListener{
     final int PHOTO_REQUEST_SHOOT = 1;
     final int PHOTO_REQUEST_PHOTOGRAPH = 2;
     final int PHOTO_REQUEST_CUT = 3;
-    static int position = 0;
     boolean DATA_GET_STATE;
     File tempFile = null;
     File GuiShengApp;
     File GuiShengApp_headpic;
     int isTempFileEmpty = 1;
+    GuiShengDao guiShengDao;
+    Uri imgUrl = null ;
+    Toolbar toolbar;
+    SlidingTabLayout mTabLayout;
+    ViewPager viewpager;
+    LinearLayout unlog_interface;
+    FrameLayout toggle_wrapper;
+    LinearLayout main_wrapper;
+    HeadpicImageView user_headpic;
     Intent show_headpic;
-    TextView newsLine, originalLine, interactLine;
-    Button news, original, interact;
-    LinearLayout upload_headpic, change_name, choose_unlog;
-    View dialog_view;
     MyDialog dialog;
-    String new_name;
+    TextView username;
     EditText et_username;
-    FrameLayout Log_interface;
-    Animation right_slide_back;
-    Animation left_slide_in;
-    ViewGroup myActionBarLayout;
     Message message = new Message();
+    AppCompatButton log_now,register;
+    DrawerLayout drawerLayout;
+    ToggleListView lvMenu;
+    boolean okToRegister = true;
     final Handler handler = new Handler(){
         @Override
         public void handleMessage(Message message){
             switch(message.what){
-               case 0://new NetDataObtain().DataRequireOver();
+                case 0://new NetDataObtain().DataRequireOver();
                    DATA_GET_STATE = true;
                    break;
                 case 1:Toast.makeText(MainActivity.this,getResources().getText(R.string.err),Toast.LENGTH_SHORT).show();
                     break;
-           }
+                case 2:
+//                    progressDialog.dismiss();
+                    username.setText((String) message.obj);
+                    Toast.makeText(MainActivity.this, "修改成功!", Toast.LENGTH_SHORT).show();
+                    guiShengDao.updateUserName(Api.logged_username, (String) message.obj);
+                    break;
+                case 3:
+  //                  progressDialog.dismiss();
+                    dialog.dismiss();
+                    Toast.makeText(MainActivity.this,"注册成功!",Toast.LENGTH_SHORT).show();
+                    drawerLayout.closeDrawers();
+                    break;
+                case 4:
+                    TextView email_param = (TextView) dialog.findViewById(R.id.email_param);
+                    if(!(boolean)message.obj){
+                        Toast.makeText(MainActivity.this, "该邮箱已被注册!", Toast.LENGTH_SHORT).show();
+                        email_param.setTextColor(getResources().getColor(R.color.guisheng_red));
+                        okToRegister = false;
+                    }else{
+                        email_param.setTextColor(getResources().getColor(R.color.dark_grey));
+                        okToRegister = true;
+                    }
+                break;
+                case 5:
+                    //progressDialog.dismiss();
+                    Toast.makeText(MainActivity.this, "修改失败...当前网络较差", Toast.LENGTH_SHORT).show();
+                break;
+                case 6:
+                    user_headpic.setImageBitmap((Bitmap)message.obj);
+                    break;
+            }
         }
     };
 
@@ -84,120 +125,147 @@ public class MainActivity extends FragmentActivity implements View.OnTouchListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        myActionBarLayout = (ViewGroup) LayoutInflater.from(this).inflate(R.layout.mainactivity_actionbar_layout, null);
-        ActionBar actionBar = getActionBar();
-        actionBar.setCustomView(myActionBarLayout);
-        actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
-        actionBar.setDisplayShowCustomEnabled(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
         init();
-        Intent from_splash = getIntent();
+        initStatusBar();
+        Intent from_splash = this.getIntent();
         Bundle bundle = from_splash.getExtras();
         DATA_GET_STATE = bundle.getBoolean("DATA_GET_STATE");
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(connectionReceiver,intentFilter);
+        registerReceiver(connectionReceiver, intentFilter);
     }
 
 
+    private void init() {
+        et_username = (EditText) findViewById(R.id.dialog_edit);
+        viewpager = (ViewPager) findViewById(R.id.viewpager);
+        viewpager.setAdapter(new MyFragmentStatePagerAdapter(this, getSupportFragmentManager()));
+        guiShengDao = new GuiShengDao(MainActivity.this);
+        mTabLayout = (SlidingTabLayout) findViewById(R.id.sliding_tab_layout);
+        mTabLayout.setDividerColors(getResources().getColor(R.color.tab_background));
+        mTabLayout.setCustomTabView(R.layout.slidingtab_layout, R.id.tab_text);
+        mTabLayout.setBackgroundColor(getResources().getColor(R.color.tab_background));
+        mTabLayout.setSelectedIndicatorColors(getResources().getColor(R.color.guisheng_red));
+        mTabLayout.setViewPager(viewpager);
 
-   BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
-       @Override
-       public void onReceive(Context context, Intent intent) {
-           if(!DATA_GET_STATE && NetDataObtain.isNetworkAvailable(context))
-                message.what=0;
-           else if(!NetDataObtain.isNetworkAvailable(context))
-               message.what=1;
-           handler.sendMessage(message);
-       }
-   };
+        show_headpic = new Intent(MainActivity.this, Image_Viewer.class);
+        GuiShengApp = new File(File.separator + Environment.getExternalStorageDirectory() + File.separator + "GuiShengApp" + File.separator);
+        GuiShengApp_headpic = new File(File.separator + Environment.getExternalStorageDirectory() + File.separator + "GuiShengApp" + File.separator + "head_pic" + File.separator);
+        CreateFile(GuiShengApp);
+        CreateFile(GuiShengApp_headpic);
+    }
 
 
-
-    @Override
-    protected void onActivityResult ( int requestCode, int resultCode, Intent data){
-        switch (requestCode) {
-            case PHOTO_REQUEST_SHOOT:
-                if (resultCode==RESULT_OK)
-                    startZoom(Uri.fromFile(tempFile));
-                else
-                    return;
-            case PHOTO_REQUEST_PHOTOGRAPH:
-                if (data != null)
-                    startZoom(data.getData());
-                break;
-            case PHOTO_REQUEST_CUT:
-                if(data != null) {
-                    try {
-                        byte[] headpic_byte = data.getByteArrayExtra("crop_pic");
-                        show_headpic.putExtra("headpic", headpic_byte);
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(headpic_byte, 0, headpic_byte.length);
-                        user_headpic.setImageBitmap(bitmap);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                break;
+    private void initStatusBar() {
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            SystemBarTintManager tintManager = new SystemBarTintManager(this);
+            tintManager.setStatusBarTintEnabled(true);
+            tintManager.setStatusBarTintResource(R.color.guisheng_red);
+        }
+        if (toolbar != null) {
+            toolbar.setTitle("");
+            setSupportActionBar(toolbar);
+            ImageView side_menu_btn = (ImageView)toolbar.findViewById(R.id.side_menu_btn);
+            side_menu_btn.setOnClickListener(this);
+            drawerLayout = (DrawerLayout)findViewById(R.id.drawerLayout);
+            lvMenu = new ToggleListView(this,Api.screen_width,Api.screen_height);
+            unlog_interface =(LinearLayout) LayoutInflater.from(MainActivity.this).inflate(R.layout.unlog_interface, null);
+            lvMenu.setOnItemClickListener(this);
+            toggle_wrapper = (FrameLayout)findViewById(R.id.toggle_wrapper);
+            if(Api.log_status == 1) {
+                toggle_wrapper.addView(lvMenu);
+                user_headpic = (HeadpicImageView) lvMenu.headpicview_wrapper.findViewById(R.id.user_head_pic);
+            }else{
+                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int)(0.72*Api.screen_width), ViewGroup.LayoutParams.MATCH_PARENT);
+                unlog_interface.setLayoutParams(lp);
+                toggle_wrapper.addView(unlog_interface);
+                log_now = (AppCompatButton)unlog_interface.findViewById(R.id.log_now);
+                register = (AppCompatButton)unlog_interface.findViewById(R.id.register);
+                log_now.setOnClickListener(this);
+                register.setOnClickListener(this);
+                user_headpic = (HeadpicImageView) unlog_interface.findViewById(R.id.user_head_pic);
+                user_headpic.setOnClickListener(this);
+            }
         }
     }
+        BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (!DATA_GET_STATE && NetDataObtain.isNetworkAvailable(context))
+                    message.what = 0;
+                else if (!NetDataObtain.isNetworkAvailable(context))
+                    message.what = 1;
+                //handler.sendMessage(message);
+            }
+        };
 
-@Override
-public boolean onTouchEvent(MotionEvent event){
-    if(event.getX()>Log_interface.getWidth())
-       logRollBack();
-    return true;
-}
+        @Override
+        protected void onActivityResult ( int requestCode, int resultCode, Intent data){
+            switch (requestCode) {
+                case PHOTO_REQUEST_SHOOT:
+                    if (resultCode == RESULT_OK) {
+                        startZoom(Uri.fromFile(tempFile));
+                        imgUrl = Uri.fromFile(tempFile);
+                        break;
+                    }
+                    else
+                        return;
+                case PHOTO_REQUEST_PHOTOGRAPH:
+                    if (data != null) {
+                        startZoom(data.getData());
+                        imgUrl = data.getData();
+                        break;
+                    }
+                    break;
+                case PHOTO_REQUEST_CUT:
+                    if (data != null) {
+                        try {
+                            byte[] headpic_byte = data.getByteArrayExtra("crop_pic");
+                            show_headpic.putExtra("headpic", imgUrl);
+                            final Bitmap bitmap = BitmapFactory.decodeByteArray(headpic_byte, 0, headpic_byte.length);
+                            UploadClient uploadClient = new UploadClient();
+                            final String avatar_url = uploadClient.uploadImg(headpic_byte,Integer.parseInt(Api.user_id));
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try{
+                                        JSONObject jsonObject = new JSONObject();
+                                        jsonObject.put("avatar_url", avatar_url);
+                                        jsonObject.put("username", Api.logged_username);
+                                        jsonObject.put("email", Api.logged_user_email);
+                                        jsonObject.put("id", Integer.parseInt(Api.user_id));
+                                        URL url = new URL(Api.api + Api.users + Api.user_id);
+                                        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+                                        conn.setRequestMethod("PUT");
+                                        conn.setRequestProperty("Content-type", "application/json");
+                                        conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString(Api.user_token.getBytes(), Base64.NO_WRAP));
+                                        conn.setDoOutput(true);
+                                        conn.setUseCaches(false);
+                                        conn.connect();
+                                        DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
+                                        dos.writeBytes(jsonObject.toString());
+                                        dos.flush();
+                                        dos.close();
+                                        Log.i("here",conn.getResponseCode()+"");
+                                        conn.disconnect();
+                                        Message message = new Message();
+                                        message.what = 6;
+                                        message.obj = bitmap;
+                                        handler.sendMessage(message);
+                                    }catch(Exception e){
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    break;
+            }
+        }
 
-    @Override
-    public boolean onTouch (View v,MotionEvent event) {
-        switch(event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                if(status==0)
-                    return false;
-                else
-                    return true;
-            case MotionEvent.ACTION_UP:
-                v.setPressed(true);
-                switch (v.getId()) {
-                    case R.id.upload_headpic:
-                        if (Log_interface.getVisibility() == View.VISIBLE && log_status == 1) {
-                            uploadUserpicDialog();
-                            ToLogging.requestFocusFromTouch();
-                        }
-                        return true;
-                    case R.id.change_name:
-                        if (Log_interface.getVisibility() == View.VISIBLE && log_status == 1) {
-                            changeNameDialog();
-                            ToLogging.requestFocusFromTouch();
-                        }
-                        return true;
-                    case R.id.choose_unlog:
-                        if (Log_interface.getVisibility() == View.VISIBLE && log_status == 1) {
-                            chooseUnlogDialog();
-                            ToLogging.requestFocusFromTouch();
-                        }
-                        return true;
-                    case R.id.user_head_pic:
-                        startActivity(show_headpic);
-                        return true;
-                    case R.id.logging:
-                        ToLoggingClickAction();
-                        return true;
-                    case R.id.tab_interact:
-                        interactOnClickAction();
-                        return true;
-                    case R.id.tab_original:
-                        originalOnClickAction();
-                        return true;
-                    case R.id.tab_news:
-                        newsOnClickAction();
-                        return true;
-                        }
-                }
-        v.setPressed(false);
-        return false;
-    }
 
     private void DialogStandardSetting() {
         dialog.setCancelable(true);
@@ -209,8 +277,8 @@ public boolean onTouchEvent(MotionEvent event){
         lp.y = 144;
     }
 
-    private  void uploadUserpicDialog() {
-        dialog = new MyDialog(MainActivity.this, R.layout.upload_headpic_dialog_interface, new MyDialog.ChangeNameDialogListener() {
+    private void uploadUserpicDialog() {
+        dialog = new MyDialog(MainActivity.this, R.layout.upload_headpic_dialog_interface, new MyDialog.MyDialogListener() {
             @Override
             public void onClick(View v) {
                 switch (v.getId()) {
@@ -237,18 +305,63 @@ public boolean onTouchEvent(MotionEvent event){
     }
 
     private void changeNameDialog() {
-        dialog = new MyDialog(MainActivity.this, R.layout.change_name_dialog_interface, new MyDialog.ChangeNameDialogListener() {
-            @Override
+        dialog = new MyDialog(MainActivity.this, R.layout.change_name_dialog_interface, new MyDialog.MyDialogListener() {
             public void onClick(View v) {
                 switch (v.getId()) {
                     case R.id.dialog_positive_button:
                         et_username = (EditText) dialog.findViewById(R.id.dialog_edit);
-                        new_name = et_username.getText().toString();
-                        TextView username = (TextView) findViewById(R.id.username);
-                        username.setText(new_name);
+                        final String new_name = et_username.getText().toString();
+                        username = (TextView) findViewById(R.id.username);
+                        Runnable runnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                Looper.prepare();
+                                //progressDialog = new ProgressDialog(MainActivity.this);
+                               // progressDialog.show();
+                                try{
+                                    JSONObject jsonObject = new JSONObject();
+                                    jsonObject.put("id",Integer.parseInt(Api.user_id));
+                                    jsonObject.put("email",Api.logged_user_email);
+                                    jsonObject.put("username", new_name);
+                                    jsonObject.put("avatar","null");
+                                    String update_name = Api.api + Api.users + Integer.parseInt(Api.user_id);
+                                    URL url = new URL(update_name);
+                                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                                    conn.setRequestMethod("PUT");
+                                    conn.setDoOutput(true);
+                                    conn.setDoInput(false);
+                                    conn.setUseCaches(false);
+                                    conn.setRequestProperty("Content-type", "application/json");
+                                    conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString(Api.user_token.getBytes(), Base64.NO_WRAP));
+                                    conn.connect();
+                                    DataOutputStream dos = new DataOutputStream( conn.getOutputStream());
+                                    dos.writeBytes(jsonObject.toString());
+                                    dos.flush();
+                                    dos.close();
+                                    Log.i("what", jsonObject.toString()+" ");
+                                    try{
+                                        Message message = new Message();
+                                        message.what = 2;
+                                        message.obj = new_name;
+                                        handler.sendMessage(message);
+                                    }catch (Exception e)
+                                    {
+                                        Message message = new Message();
+                                        message.what = 5;
+                                        handler.sendMessage(message);
+                                    }
+                                    conn.disconnect();
+                                }catch(Exception e){
+                                    e.printStackTrace();
+                                }
+                            }
+                        };
+                        Thread thread = new Thread(runnable);
+                        thread.start();
+                        while(true)
+                            if(!thread.isAlive())
+                                break;
                         et_username.setText("");
-                        Log_interface.setAnimation(right_slide_back);
-                        Log_interface.setVisibility(View.GONE);
                         dialog.dismiss();
                         break;
                     case R.id.dialog_negative_button:
@@ -286,17 +399,16 @@ public boolean onTouchEvent(MotionEvent event){
     }
 
     private void chooseUnlogDialog() {
-        dialog = new MyDialog(MainActivity.this, R.layout.choose_unlog_dialog_interface, new MyDialog.ChangeNameDialogListener() {
+        dialog = new MyDialog(MainActivity.this, R.layout.choose_unlog_dialog_interface, new MyDialog.MyDialogListener() {
             @Override
             public void onClick(View v) {
                 switch (v.getId()) {
                     case R.id.dialog_positive_button:
-                        right_slide_back = AnimationUtils.loadAnimation(MainActivity.this, R.anim.right_slide_back);
-                        Log_interface.setAnimation(right_slide_back);
-                        Log_interface.setVisibility(View.GONE);
-                        status = 0;
+                        Api.log_status = 0;
+                        drawerLayout.closeDrawers();
+                        toggle_wrapper.removeAllViews();
+                        toggle_wrapper.addView(unlog_interface);
                         dialog.dismiss();
-                        Log_interface = (FrameLayout) findViewById(R.id.unlog_interface);
                         break;
                     case R.id.dialog_negative_button:
                         dialog.dismiss();
@@ -309,188 +421,252 @@ public boolean onTouchEvent(MotionEvent event){
         DialogStandardSetting();
     }
 
-    private void ToLoggingClickAction() {
-        right_slide_back = AnimationUtils.loadAnimation(MainActivity.this, R.anim.right_slide_back);
-        left_slide_in = AnimationUtils.loadAnimation(MainActivity.this, R.anim.left_slide_in);
-        int tag = Log_interface.getVisibility();
-        if (tag == View.GONE) {
-            ToLogging.startAnimation(AnimationUtils.loadAnimation(MainActivity.this,R.anim.self_rotate));
-            Log_interface.setAnimation(left_slide_in);
-            Log_interface.setVisibility(View.VISIBLE);
-            status = 1;
-        } else if (tag == View.VISIBLE) {
-            ToLogging.startAnimation(AnimationUtils.loadAnimation(MainActivity.this,R.anim.self_rotate));
-            Log_interface.setAnimation(right_slide_back);
-            Log_interface.setVisibility(View.GONE);
-            status = 0;
-        }
-    }
 
-    private void interactOnClickAction(){
-        switch (viewpager.getCurrentItem()) {
-            case 2:
-                break;
-            default:
-                news.setTextColor(getResources().getColor(R.color.dark_grey));
-                original.setTextColor(getResources().getColor(R.color.dark_grey));
-                newsLine.setVisibility(View.INVISIBLE);
-                originalLine.setVisibility(View.INVISIBLE);
-                interact.setTextColor(getResources().getColor(R.color.guisheng_red));
-                interactLine.setVisibility(View.VISIBLE);
-                viewpager.setCurrentItem(2);
-                break;
-        }
-        current_item = 2;
-    }
-
-    private void originalOnClickAction() {
-        switch (viewpager.getCurrentItem()) {
-            case 1:
-                break;
-            default:
-                news.setTextColor(getResources().getColor(R.color.dark_grey));
-                interact.setTextColor(getResources().getColor(R.color.dark_grey));
-                newsLine.setVisibility(View.INVISIBLE);
-                interactLine.setVisibility(View.INVISIBLE);
-                original.setTextColor(getResources().getColor(R.color.guisheng_red));
-                originalLine.setVisibility(View.VISIBLE);
-                viewpager.setCurrentItem(1);
-                break;
-        }
-        current_item = 1;
-    }
-
-    private void newsOnClickAction(){
-        switch (viewpager.getCurrentItem()) {
-            case 0:
-                break;
-            default:
-                original.setTextColor(getResources().getColor(R.color.dark_grey));
-                interact.setTextColor(getResources().getColor(R.color.dark_grey));
-                originalLine.setVisibility(View.INVISIBLE);
-                interactLine.setVisibility(View.INVISIBLE);
-                news.setTextColor(getResources().getColor(R.color.guisheng_red));
-                newsLine.setVisibility(View.VISIBLE);
-                viewpager.setCurrentItem(0);
-                break;
-        }
-        current_item = 0;
-    }
-
-    private void init() {
-        news = (Button) findViewById(R.id.tab_news);
-        original = (Button) findViewById(R.id.tab_original);
-        interact = (Button) findViewById(R.id.tab_interact);
-        newsLine = (TextView) findViewById(R.id.news_line);
-        originalLine = (TextView) findViewById(R.id.original_line);
-        interactLine = (TextView) findViewById(R.id.interact_line);
-        upload_headpic = (LinearLayout) findViewById(R.id.upload_headpic);
-        change_name = (LinearLayout) findViewById(R.id.change_name);
-        choose_unlog = (LinearLayout) findViewById(R.id.choose_unlog);
-        dialog_view = findViewById(R.id.dialog);
-        et_username = (EditText) findViewById(R.id.dialog_edit);
-        user_headpic = (HeadpicImageView) findViewById(R.id.user_head_pic);
-        ToLogging = (ImageButton)myActionBarLayout.findViewById(R.id.logging);
-        if (log_status == 1) {
-            Log_interface = (FrameLayout) findViewById(R.id.logged_interface);
-            dialog_view = getLayoutInflater().inflate(R.layout.change_name_dialog_interface, null);
-        } else {
-            Log_interface = (FrameLayout) findViewById(R.id.unlog_interface);
-        }
-
-        viewpager = (MyViewPager) findViewById(R.id.viewpager);
-        viewpager.setAdapter(new MyFragmentStatePagerAdapter(getSupportFragmentManager()));
-        show_headpic = new Intent(MainActivity.this, Headpic_Viewer.class);
-        GuiShengApp = new File(File.separator + Environment.getExternalStorageDirectory() + File.separator + "GuiShengApp" + File.separator);
-        GuiShengApp_headpic = new File(File.separator + Environment.getExternalStorageDirectory() + File.separator + "GuiShengApp" + File.separator + "head_pic" + File.separator);
-        CreateFile(GuiShengApp);
-        CreateFile(GuiShengApp_headpic);
-        news.setOnTouchListener(this);
-        original.setOnTouchListener(this);
-        interact.setOnTouchListener(this);
-        upload_headpic.setOnTouchListener(this);
-        change_name.setOnTouchListener(this);
-        choose_unlog.setOnTouchListener(this);
-        ToLogging.setOnTouchListener(this);
-        user_headpic.setOnTouchListener(this);
-        right_slide_back = AnimationUtils.loadAnimation(MainActivity.this, R.anim.right_slide_back);
-        left_slide_in = AnimationUtils.loadAnimation(MainActivity.this, R.anim.left_slide_in);
-        news.setTextColor(getResources().getColor(R.color.guisheng_red));
-        newsLine.setVisibility(View.VISIBLE);
-        viewpager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+    private void logDialog() {
+        dialog = new MyDialog(MainActivity.this, R.layout.log_dialog_interface, new MyDialog.MyDialogListener() {
             @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-                MainActivity.position = position;
-                switch (position){
-                    case 0:NewsActionBarSelected();
+            public void onClick(View v) {
+                switch (v.getId()) {
+                    case R.id.dialog_positive_button:
+                        EditText dialog_email_edit = (EditText) dialog.findViewById(R.id.dialog_name_edit);
+                        dialog_email_edit.setHorizontallyScrolling(false);
+                        final String email = dialog_email_edit.getText().toString();
+                        EditText dialog_password_edit = (EditText) dialog.findViewById(R.id.dialog_password_edit);
+                        final String password = dialog_password_edit.getText().toString();
+                        Runnable runnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                String token;
+                                String userid;
+                                try {
+                                    String name_password= email+":"+password;
+                                    URL url = new URL(Api.api+Api.token);
+                                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                                    conn.setRequestMethod("GET");
+                                    conn.setDoInput(true);
+                                    conn.setUseCaches(false);
+                                    conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString(name_password.getBytes(), Base64.DEFAULT));
+                                    conn.connect();
+                                    InputStream is = conn.getInputStream();
+                                    String whole_data = HttpUtils.readInputStream(is);
+                                    JSONObject object = new JSONObject(whole_data);
+                                    //登陆成功后 取用户名和用户id信息 存在数据库里头
+                                    token = object.get("token").toString();
+                                    userid = object.get("id").toString();
+                                    Api.user_token = token;
+                                    Api.user_id = userid;
+                                    is.close();
+                                    conn.disconnect();
+                                    if(userid!=null && !userid.equals(guiShengDao.getUserID(email))) {
+                                        String user_info = Api.api + Api.users + Integer.parseInt(userid);
+                                        url = new URL(user_info);
+                                        conn = (HttpURLConnection) url.openConnection();
+                                        conn.setRequestMethod("GET");
+                                        conn.setDoInput(true);
+                                        conn.setUseCaches(false);
+                                        conn.connect();
+                                        is = conn.getInputStream();
+                                        whole_data = HttpUtils.readInputStream(is);
+                                        JSONObject jsonObject = new JSONObject(whole_data);
+                                        guiShengDao.insertUserInfo(email, userid, token, jsonObject.getString("username"), "");
+                                        is.close();
+                                        conn.disconnect();
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        };
+                        Thread thread = new Thread(runnable);
+                        thread.start();
+                        while (true) {
+                            if (!thread.isAlive())
+                                break;
+                        }
+                        if(guiShengDao.getUserToken(email)!=null && Api.user_id!=null) {
+                            drawerLayout.closeDrawers();
+                            toggle_wrapper.removeAllViews();
+                            toggle_wrapper.addView(lvMenu);
+                            Api.log_status = 1;
+                            user_headpic = (HeadpicImageView)lvMenu.findViewById(R.id.user_head_pic);
+                            TextView username = (TextView)lvMenu.findViewById(R.id.username);
+                            Api.logged_username = guiShengDao.getUserName(email);
+                            Api.logged_user_email = email;
+                            username.setText(Api.logged_username);
+                            dialog.dismiss();
+                        }else{
+                            Toast.makeText(MainActivity.this,"用户名或密码错误!",Toast.LENGTH_SHORT).show();
+                            dialog_password_edit.setText("");
+                        }
                         break;
-                    case 1:OriginalActionBarSelected();
+                    case R.id.dialog_negative_button:
+                        drawerLayout.closeDrawers();
+                        dialog.dismiss();
                         break;
-                    case 2:InteractActionBarSelected();
+                    default:
                         break;
                 }
             }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-
-            }
         });
+        DialogStandardSetting();
     }
 
-    private void NewsActionBarSelected() {
-        original.setTextColor(getResources().getColor(R.color.dark_grey));
-        interact.setTextColor(getResources().getColor(R.color.dark_grey));
-        originalLine.setVisibility(View.INVISIBLE);
-        interactLine.setVisibility(View.INVISIBLE);
-        news.setTextColor(getResources().getColor(R.color.guisheng_red));
-        newsLine.setVisibility(View.VISIBLE);
-        viewpager.setCurrentItem(0);
-        current_item = 0;
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(connectionReceiver);
     }
 
-    private void OriginalActionBarSelected(){
-        news.setTextColor(getResources().getColor(R.color.dark_grey));
-        interact.setTextColor(getResources().getColor(R.color.dark_grey));
-        newsLine.setVisibility(View.INVISIBLE);
-        interactLine.setVisibility(View.INVISIBLE);
-        original.setTextColor(getResources().getColor(R.color.guisheng_red));
-        originalLine.setVisibility(View.VISIBLE);
-        viewpager.setCurrentItem(1);
-        current_item = 1;
-    }
-
-    private void InteractActionBarSelected(){
-        news.setTextColor(getResources().getColor(R.color.dark_grey));
-        original.setTextColor(getResources().getColor(R.color.dark_grey));
-        newsLine.setVisibility(View.INVISIBLE);
-        originalLine.setVisibility(View.INVISIBLE);
-        interact.setTextColor(getResources().getColor(R.color.guisheng_red));
-        interactLine.setVisibility(View.VISIBLE);
-        viewpager.setCurrentItem(2);
-        current_item = 2;
-    }
-
-    private void logRollBack(){
-        if(MainActivity.status == 1) {
-            ToLogging.startAnimation(AnimationUtils.loadAnimation(MainActivity.this,R.anim.self_rotate));
-            Animation right_slide_back = AnimationUtils.loadAnimation(MainActivity.this, R.anim.right_slide_back);
-            Log_interface.setAnimation(right_slide_back);
-            Log_interface.setVisibility(View.GONE);
-            status = 0;
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.log_now:
+                logDialog();
+                break;
+            case R.id.register:
+                registerUser();
+                break;
+            case R.id.user_head_pic:
+                startActivity(show_headpic);
+                break;
+            case R.id.side_menu_btn:
+                if(!drawerLayout.isDrawerOpen(GravityCompat.START))
+                    drawerLayout.openDrawer(GravityCompat.START);
+                else
+                    drawerLayout.closeDrawers();
+                break;
         }
     }
-@Override
-    public void onDestroy(){
-      super.onDestroy();
-      unregisterReceiver(connectionReceiver);
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        switch(position){
+            case 0:startActivity(show_headpic);
+                break;
+            case 1:uploadUserpicDialog();
+                break;
+            case 2:changeNameDialog();
+                break;
+            case 3:chooseUnlogDialog();
+                break;
+            default:Intent intent = new Intent(MainActivity.this,About.class);
+                startActivity(intent);
+        }
+    }
+
+    private void registerUser(){
+        dialog = new MyDialog(MainActivity.this, R.layout.register_dialog_layout, new MyDialog.MyDialogListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()) {
+                    case R.id.dialog_positive_button:
+                        final EditText input_email = (EditText) dialog.findViewById(R.id.input_email);
+                        final EditText input_username = (EditText) dialog.findViewById(R.id.input_username);
+                        final EditText input_password = (EditText) dialog.findViewById(R.id.input_password);
+                        if (input_email.getText().toString().equals("") || input_username.getText().toString().equals("") || input_password.getText().toString().equals(""))
+                            okToRegister = false;
+                        else
+                            okToRegister = true;
+                        if (okToRegister) {
+                            dialog.dismiss();
+                            //progressDialog = new ProgressDialog(MainActivity.this);
+                            //progressDialog.show();
+                            Runnable runnable = new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        JSONObject new_user = new JSONObject();
+                                        new_user.put("email", input_email.getText().toString());
+                                        new_user.put("username", input_username.getText().toString());
+                                        new_user.put("password", input_password.getText().toString());
+                                        URL register_url = new URL(Api.api + Api.users);
+                                        HttpURLConnection conn = (HttpURLConnection) register_url.openConnection();
+                                        conn.setRequestMethod("POST");
+                                        conn.setRequestProperty("Content-type", "application/json");
+                                        conn.setDoOutput(true);
+                                        conn.setDoInput(false);
+                                        conn.setUseCaches(false);
+                                        conn.connect();
+                                        DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
+                                        dos.writeBytes(new_user.toString());
+                                        dos.flush();
+                                        dos.close();
+                                        Message message = new Message();
+                                        message.what = 3;
+                                        message.obj = 1;
+                                        handler.sendMessage(message);
+                                        conn.disconnect();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            };
+                            Thread thread = new Thread(runnable);
+                            thread.start();
+                            while (true)
+                                if (!thread.isAlive())
+                                    break;
+                        }else{
+                            Toast.makeText(MainActivity.this,"信息不全或邮箱已被注册..",Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case R.id.dialog_negative_button:dialog.dismiss();
+                        break;
+                }
+            }
+        });
+        final EditText input_email = (EditText)dialog.findViewById(R.id.input_email);
+        input_email.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if(!hasFocus){
+                   new Thread(new Runnable() {
+                      @Override
+                      public void run() {
+                          Looper.prepare();
+                          try {
+                              URL get_user_email = new URL(Api.api + Api.users);
+                              HttpURLConnection conn = (HttpURLConnection)get_user_email.openConnection();
+                              conn.setRequestMethod("GET");
+                              conn.setDoInput(true);
+                              conn.setUseCaches(false);
+                              conn.connect();
+                              InputStream is = conn.getInputStream();
+                              String result = HttpUtils.readInputStream(is);
+                              JSONObject whole = new JSONObject(result);
+                              JSONArray users = whole.getJSONArray("user");
+                              int i;
+                              for(i = 0;i<users.length();i++){
+                                  if(input_email.getText().toString().equals(users.getJSONObject(i).get("email").toString())) {
+                                      Message message = new Message();
+                                      message.what = 4;
+                                      message.obj = false;
+                                      handler.sendMessage(message);
+                                      break;
+                                  }
+                              }
+                              if(i==users.length()){
+                                  Message message = new Message();
+                                  message.what = 4;
+                                  message.obj =true;
+                                  handler.sendMessage(message);
+                              }
+                              is.close();
+                              conn.disconnect();
+                          }catch(Exception e){
+                              e.printStackTrace();
+                          }
+                      }
+                   }).start();//新开线程检查邮箱是否重复
+                }
+            }
+        });
+        DialogStandardSetting();
+        dialog.show();
     }
 }
+
+
 
 
 

@@ -4,31 +4,40 @@ package com.muxistudio.guishengapp;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AnimationUtils;
-import android.widget.LinearLayout;
-import android.widget.Toast;
 
 public class NewsFragment extends Fragment {
+    static View list_view;
+    static MyListView news_listview;
+    static ListViewAdapter adapter;
+
+
     @Override
     public View onCreateView(LayoutInflater inflater,ViewGroup container,Bundle savedInstanceState){
-        View list_view =  inflater.inflate(R.layout.news,container,false);
-        final MyListView news_listview = (MyListView)list_view.findViewById(R.id.news_listview);
-        final ListViewAdapter adapter =new ListViewAdapter(getActivity(),Api.news_list);
+        list_view = LayoutInflater.from(getActivity()).inflate(R.layout.news,null);
+        adapter = new ListViewAdapter(getActivity(),Api.news_list);
+        news_listview = (MyListView) list_view.findViewById(R.id.news_listview);
         news_listview.setAdapter(adapter);
         news_listview.adapter = adapter;
-        news_listview.which_tab=0;
-        list_view.setTag(0);
         news_listview.setOnRefreshListener(new MyListView.OnRefreshListener() {
             @Override
             public void onHeaderRefresh() {
                 new AsyncTask<Void, Void, Void>() {
                     int header_refresh_state;
                     protected Void doInBackground(Void... params) {
+                        long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(getActivity()))
-                            header_refresh_state = new NetDataObtain().DataRequireOver();
+                            header_refresh_state = new NetDataObtain(getContext()).DataRequireOver(0);
+                        long endTime = System.currentTimeMillis();
+                        if (endTime - beginTime < 2000)
+                            try {
+                                Thread.sleep(2000 - (endTime - beginTime));
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
                         return null;
                     }
 
@@ -53,7 +62,7 @@ public class NewsFragment extends Fragment {
                     protected Void doInBackground(Void... params) {
                         long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(getActivity()))
-                            footer_refresh_state = new NetDataObtain().DataRequireAppend();
+                            footer_refresh_state = new NetDataObtain(getContext()).DataRequireAppend(0);
                         long endTime = System.currentTimeMillis();
                         if (endTime - beginTime < 2000)
                             try {

@@ -13,6 +13,8 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.widget.ImageView;
 
+import java.lang.ref.SoftReference;
+
 
 public class HeadpicImageView extends ImageView {
     PorterDuffXfermode porterDuffXfermode ;
@@ -22,6 +24,7 @@ public class HeadpicImageView extends ImageView {
     Path path;
     PaintFlagsDrawFilter paintFlagsDrawFilter;
     Context context;
+    SoftReference head_pic;
     public static int parent_width,parent_height;
 
     public HeadpicImageView(Context context, AttributeSet attributeSet) {
@@ -29,6 +32,18 @@ public class HeadpicImageView extends ImageView {
         this.context = context;
         porterDuffXfermode = new PorterDuffXfermode(PorterDuff.Mode.DST_IN);
         bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.unlog);
+        head_pic = new SoftReference<>(bitmap);
+        paint = new Paint();
+        path = new Path();
+        paintFlagsDrawFilter = new PaintFlagsDrawFilter(0,Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+    }
+
+    public HeadpicImageView(Context context) {
+        super(context);
+        this.context = context;
+        porterDuffXfermode = new PorterDuffXfermode(PorterDuff.Mode.DST_IN);
+        bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.unlog);
+        head_pic = new SoftReference<>(bitmap);
         paint = new Paint();
         path = new Path();
         paintFlagsDrawFilter = new PaintFlagsDrawFilter(0,Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
@@ -36,7 +51,7 @@ public class HeadpicImageView extends ImageView {
 
     @Override
     public void onDraw(Canvas canvas){
-        dst_rect = new Rect(4,4,getWidth()-4,getHeight()-4);
+        dst_rect = new Rect(0,0,getWidth(),getHeight());
         path.addCircle(getWidth() / 2, getHeight() / 2, getHeight() / 2, Path.Direction.CW);
         canvas.setDrawFilter(paintFlagsDrawFilter);
         canvas.clipPath(path);
@@ -46,15 +61,19 @@ public class HeadpicImageView extends ImageView {
         paint.setARGB(255, 153, 153, 153);
         canvas.drawCircle(getWidth() / 2, getHeight() / 2, getHeight() / 2, paint);
         path.reset();
-        path.addCircle(getWidth() / 2, getHeight() / 2, getHeight() / 2 - 7f, Path.Direction.CW);
+        path.addCircle(getWidth() / 2, getHeight() / 2, getHeight() / 2 , Path.Direction.CW);
         canvas.clipPath(path);
-        canvas.drawBitmap(bitmap,src_rect,dst_rect, null);
+        if(head_pic.get()!=null)
+            canvas.drawBitmap((Bitmap)head_pic.get(), src_rect, dst_rect, null);
+        else
+            canvas.drawBitmap(bitmap, src_rect, dst_rect, null);
     }
 
     @Override
     public void setImageBitmap(Bitmap bitmap){
         this.bitmap = bitmap;
+        head_pic = new SoftReference<>(bitmap);
         super.setImageBitmap(bitmap);
-        src_rect = new Rect(parent_width/2-240,parent_height/2-240,parent_width/2+240,parent_height/2+240);
+        src_rect = new Rect(0,0,getWidth(),getHeight());
     }
 }

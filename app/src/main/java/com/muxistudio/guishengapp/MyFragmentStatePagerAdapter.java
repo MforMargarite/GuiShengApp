@@ -1,6 +1,7 @@
 package com.muxistudio.guishengapp;
 
 
+import android.content.Context;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -8,31 +9,34 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 
 
 public class MyFragmentStatePagerAdapter extends FragmentStatePagerAdapter {
-    MyFragmentStatePagerAdapter(FragmentManager fm) {
+    String[] titles;
+    MyFragmentStatePagerAdapter(Context context,FragmentManager fm)
+    {
         super(fm);
+        titles = context.getResources().getStringArray(R.array.tab_name);
     }
+
 
     @Override
     public Fragment getItem(int position) {
         switch (position) {
-            case 0:
-                NewsFragment newsFragment = new NewsFragment();
-                return newsFragment;
-            case 1:
-                OriginalFragment originalFragment = new OriginalFragment();
-                return originalFragment;
-            case 2:
-                InteractFragment interactFragment = new InteractFragment();
-                return interactFragment;
             default:
-                return new NewsFragment();
+                return  new NewsFragment();
+            case 1:
+                return  new OriginalFragment();
+            case 2:
+                return new InteractFragment();
         }
     }
 
     @Override
     public int getCount() {
-        return 3;
+        return titles.length;
     }
 
 
+    @Override
+    public String getPageTitle(int position){
+        return titles[position];
+    }
 }

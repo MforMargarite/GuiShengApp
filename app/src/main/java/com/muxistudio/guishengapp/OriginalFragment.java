@@ -9,23 +9,33 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 public class OriginalFragment extends Fragment {
+    static View list_view ;
+    static MyListView original_listview;
+    static ListViewAdapter adapter;
+
     @Override
     public View onCreateView(LayoutInflater inflater,ViewGroup container,Bundle savedInstanceState) {
-        View list_view =inflater.inflate(R.layout.original, container, false);
-        ListViewAdapter adapter =new ListViewAdapter(getActivity(),Api.original_list);
-        final MyListView original_listview = (MyListView)list_view.findViewById(R.id.original_listview);
+        list_view =inflater.inflate(R.layout.original, container, false);
+        adapter =new ListViewAdapter(getActivity(),Api.original_list);
+        original_listview = (MyListView)list_view.findViewById(R.id.original_listview);
         original_listview.setAdapter(adapter);
         original_listview.adapter = adapter;
-        original_listview.which_tab=1;
-        list_view.setTag(1);
         original_listview.setOnRefreshListener(new MyListView.OnRefreshListener() {
             @Override
             public void onHeaderRefresh() {
                 new AsyncTask<Void, Void, Void>() {
                     int header_refresh_state;
                     protected Void doInBackground(Void... params) {
+                        long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(getActivity()))
-                            header_refresh_state = new NetDataObtain().DataRequireOver();
+                            header_refresh_state = new NetDataObtain(getContext()).DataRequireOver(1);
+                        long endTime = System.currentTimeMillis();
+                        if (endTime - beginTime < 2000)
+                            try {
+                                Thread.sleep(2000 - (endTime - beginTime));
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
                         return null;
                     }
 
@@ -49,7 +59,7 @@ public class OriginalFragment extends Fragment {
                     protected Void doInBackground(Void... params) {
                         long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(getActivity()))
-                            footer_refresh_state = new NetDataObtain().DataRequireAppend();
+                            footer_refresh_state = new NetDataObtain(getContext()).DataRequireAppend(1);
                         long endTime = System.currentTimeMillis();
                         if (endTime - beginTime < 2000)
                             try {
