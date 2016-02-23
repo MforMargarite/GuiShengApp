@@ -26,7 +26,7 @@ public class MyCircleCrop extends Activity implements View.OnClickListener{
     Button headpic_positive_btn;
     LinearLayout option;
     Uri uri;
-    int parent_width,parent_height,count=0;
+    int count=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +47,7 @@ public class MyCircleCrop extends Activity implements View.OnClickListener{
         frameLayout.addView(headpicView);
         frameLayout.addView(shadeView);
         measureView(headpicView);
-      }
+    }
 
     private void measureView(View child) {
         ViewGroup.LayoutParams params =child.getLayoutParams();
@@ -71,13 +71,11 @@ public class MyCircleCrop extends Activity implements View.OnClickListener{
             case R.id.positive_headpic:
                 HeadpicView.bitmap.recycle();
                 headpicView.setDrawingCacheEnabled(true);
-                Bitmap bitmap = Bitmap.createBitmap(headpicView.getDrawingCache(),(parent_width-(int)(240*Api.scale))/2,(parent_height-(int)(240*Api.scale))/2,(int)(480*Api.scale),(int)(480*Api.scale));
+                Bitmap bitmap = Bitmap.createBitmap(headpicView.getDrawingCache(),(headpicView.parent_width-(int)(240*Api.scale))/2,(headpicView.parent_height-(int)(240*Api.scale))/2,(int)(480*Api.scale),(int)(480*Api.scale));
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                  bitmap.compress(Bitmap.CompressFormat.PNG, 80, baos);
                 byte[] pic_byte = baos.toByteArray();
                 intent.putExtra("crop_pic", pic_byte);
-                HeadpicImageView.parent_height = parent_height;
-                HeadpicImageView.parent_width = parent_width;
                 headpicView.setDrawingCacheEnabled(false);
                 setResult(3, intent);
                 bitmap.recycle();
@@ -93,14 +91,11 @@ public class MyCircleCrop extends Activity implements View.OnClickListener{
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event){
-        parent_width = frameLayout.getWidth();
-        headpicView.parent_width = parent_width;
-        parent_height = frameLayout.getHeight();
-        headpicView.parent_height = parent_height;
         if(event.getY()<frameLayout.getHeight()) {
             if(count==0) {
                 headpicView.parent_height = headpicView.getMeasuredHeight();
-                headpicView.circleRect = new RectF((Api.screen_width - 480) / 2, (headpicView.parent_height - 480) / 2, (Api.screen_width + 480) / 2, (headpicView.parent_height + 480) / 2);
+                headpicView.parent_width = headpicView.getMeasuredWidth();
+                headpicView.circleRect = new RectF((headpicView.parent_width - 480) / 2, (headpicView.parent_height - 480) / 2, (headpicView.parent_width + 480) / 2, (headpicView.parent_height + 480) / 2);
                 count++;
             }
             return headpicView.onTouchEvent(event);

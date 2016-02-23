@@ -6,6 +6,7 @@ import android.net.NetworkInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -79,22 +80,22 @@ public class NetDataObtain {
                                 HashMap<String, Object> map = new HashMap<>();
                                 JSONObject jsonObject = jsonArray.getJSONObject(request_num++);
                                 i++;
-                                URL author_url = new URL(jsonObject.get(Api.author).toString());
+                                URL author_url = new URL(jsonObject.get(Api.writer).toString());
                                 String author_name = getAuthorNameInfo(author_url);
-                                map.put(Api.author, author_name);
-                                map.put(Api.body, jsonObject.getString(Api.body));
-                                String stringDate = jsonObject.getString(Api.timestamp);
+                                map.put(Api.writer, author_name);
+                                map.put(Api.content, jsonObject.getString(Api.content));
+                                String stringDate = jsonObject.getString(Api.date);
                                 SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US);
                                 try {
                                     Date date = sdf.parse(stringDate);
                                     sdf = new SimpleDateFormat("MM-dd", Locale.US);
-                                    map.put(Api.timestamp, sdf.format(date));
+                                    map.put(Api.date, sdf.format(date));
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 } finally {
                                     map.put(Api.title, jsonObject.getString(Api.title));
-                                    map.put(Api.comments, jsonObject.get(Api.comments));
-                                    map.put(Api.image, getFirstURL(jsonObject.getString(Api.body)));
+                                    map.put(Api.comments,url.toString().substring(0, url.toString().indexOf('?')) + Api.comments);
+                                    map.put(Api.image, getFirstURL(jsonObject.getString(Api.content)));
                                     if (tag == 2)
                                         Api.interact_list.add(map);
                                     else if (tag == 1)
@@ -182,22 +183,23 @@ public class NetDataObtain {
                                 else {
                                     HashMap<String, Object> map = new HashMap<>();
                                     JSONObject jsonObject = jsonArray.getJSONObject(index);
-                                    URL author_url = new URL(jsonObject.getString(Api.author));
+                                    URL author_url = new URL(jsonObject.getString(Api.writer));
                                     String author_name = getAuthorNameInfo(author_url);
-                                    map.put(Api.author, author_name);
-                                    map.put(Api.body, jsonObject.getString(Api.body));
-                                    String stringDate = jsonObject.getString(Api.timestamp);
+                                    map.put(Api.writer, author_name);
+                                    map.put(Api.content, jsonObject.getString(Api.content));
+                                    String stringDate = jsonObject.getString(Api.date);
                                     SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US);
                                     try {
                                         Date date = sdf.parse(stringDate);
                                         sdf = new SimpleDateFormat("MM-dd", Locale.US);
-                                        map.put(Api.timestamp, sdf.format(date));
+                                        map.put(Api.date, sdf.format(date));
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     } finally {
                                         map.put(Api.title, jsonObject.getString(Api.title));
-                                        map.put(Api.comments, jsonObject.get(Api.comments));
-                                        map.put(Api.image, getFirstURL(jsonObject.getString(Api.body)));
+                                        map.put(Api.comments,url.toString().substring(0, url.toString().indexOf('?')) + Api.comments);//评论url
+                                        map.put(Api.image, getFirstURL(jsonObject.getString(Api.content)));//content or body
+                                        Log.i("what",getFirstURL(jsonObject.getString(Api.content)));
                                         if (tag == 2)
                                             Api.temp_interact_list.add(map);
                                         else if (tag == 1)
@@ -275,7 +277,7 @@ public class NetDataObtain {
         return name;
 
     }
-
+/*
     private String getFirstURL(String body){
         int ending_tag;
         if(body.length()<14)
@@ -295,6 +297,21 @@ public class NetDataObtain {
             } else
                 return "null";
         }
+
+    }*/
+
+    private String getFirstURL(String body) {
+        String url = "null";
+        int img_tag_index = body.indexOf("<img");
+        int img_first_index = body.indexOf("http://guisheng.net");
+        int ending_tag = body.indexOf("/>",img_first_index+1);
+        int img_last_index = body.indexOf(".jpg", img_first_index + 1);
+        if (img_last_index == -1 || img_last_index>ending_tag)
+            img_last_index = body.indexOf(".png", img_first_index + 1);
+        if(img_first_index>img_tag_index){
+            url = body.substring(img_first_index,img_last_index+4);
+        }
+        return url;
     }
 
 

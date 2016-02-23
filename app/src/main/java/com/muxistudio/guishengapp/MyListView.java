@@ -39,8 +39,8 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
     View begin_refresh,ready_to_refresh,refreshing,footer_success_load,footer_fail_load,footer_is_newest;
     int footer_tag = 0;// is footer tag loaded
     float touchDownY,instanceY;
-    int header_state =-2;
-    int one_refresh_a_time = 0;
+    int header_state =-1;
+    int allow_refresh = 0;//控制下拉刷新(不可在刷新时刷新) 0表示可以刷新 1表示正在刷新 2表示
     private static final int BEGIN_A_REFRESH=0;//after that no refresh gesture will be recognized until its finishing
     private static final int READY_TO_REFRESH=1;
     private static final int REFRESHING=2;
@@ -81,7 +81,6 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         netDataObtain = new NetDataObtain(context);
     }
 
-
     private void initHeaderView(int tag) {
           HashMap<String, Object> map;
          switch (tag) {
@@ -108,7 +107,12 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
              TextView every_title = (TextView) header_view.findViewById(R.id.every_title);
              every_title.setText(map.get("title").toString());
              ImageView every_pic = (ImageView)header_view.findViewById(R.id.every_pic);
-             new ImageLoad().showHeaderImageByThread(every_pic, Api.image_api + map.get("image").toString());
+             if(!map.get("image").toString().equals("null"))
+          /*       new ImageLoad().showHeaderImageByThread(every_pic, Api.image_api+map.get("image").toString());
+          */
+                 new ImageLoad().showHeaderImageByThread(every_pic,map.get("image").toString());
+             else
+                 every_pic.setVisibility(GONE);
          } else {
              TextView underline = (TextView) header_view.findViewById(R.id.underline);
              underline.setBackgroundColor(getResources().getColor(R.color.white));
@@ -168,7 +172,8 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
-        one_refresh_a_time=0;
+        header_state = DONE;
+        allow_refresh = 0;
     }
 
     public void refresh(){
@@ -176,8 +181,8 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
-        one_refresh_a_time=0;
-
+        header_state = DONE;
+        allow_refresh = 0;
     }
 
     public void refreshFail(){
@@ -185,34 +190,39 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
         header_loading_view.setPadding(0, -header_loading_view.getMeasuredHeight(), 0, 0);
         refreshing.setVisibility(GONE);
         begin_refresh.setVisibility(GONE);
-        one_refresh_a_time=0;
+        header_state = DONE;
+        allow_refresh = 0;
     }
+
 
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                if (one_refresh_a_time == 0 && getFirstVisiblePosition() == 0 ) {
+                if (getFirstVisiblePosition() == 0 && header_state ==DONE && allow_refresh == 0) {
                     touchDownY = event.getY();
                     header_state = BEGIN_A_REFRESH;
-                } else
-                    header_state = DONE;
-                actAccordingState();
-                if(header_state!=DONE || footer_tag!=0)
+                    actAccordingState();
+                }if(header_state!=DONE || footer_tag!=0)
                     return true;
                 if (getLastVisiblePosition() == getCount()-1  &&  instanceY<touchDownY && footer_tag==0 )
                     isPrepared = prepareFooterView();
                 break;
             case MotionEvent.ACTION_MOVE:
                 instanceY = event.getY();
-                if (getFirstVisiblePosition() == 0 && one_refresh_a_time == 0 && header_state==BEGIN_A_REFRESH && instanceY-touchDownY>24) {
+                if(allow_refresh == 2 && instanceY-touchDownY>24) {
+                   //加载过程中上滑取消
+                    header_state = ROLL_BACK;
+                    actAccordingState();
+                }
+                if (getFirstVisiblePosition() == 0 &&  header_state==BEGIN_A_REFRESH && instanceY-touchDownY>24 && allow_refresh==0) {
                     begin_refresh.setVisibility(View.VISIBLE);
-                    one_refresh_a_time = 1;
+                    allow_refresh = 1;
                     header_loading_view.setPadding(0, 0, 0, 0);
-                }else if (instanceY - touchDownY < 176 && getFirstVisiblePosition() == 0 && one_refresh_a_time == 1)
+                }else if (instanceY - touchDownY < 176 && getFirstVisiblePosition() == 0 && allow_refresh == 1)
                     header_loading_view.setPadding(0, (int) (instanceY - touchDownY), 0, 0);
-                else if ((instanceY - touchDownY) > 176 && getFirstVisiblePosition() == 0 && one_refresh_a_time == 1) {
+                else if ((instanceY - touchDownY) > 176 && getFirstVisiblePosition() == 0 && allow_refresh == 1) {
                     header_state = READY_TO_REFRESH;
                     actAccordingState();
                 }
@@ -224,21 +234,20 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                if (one_refresh_a_time == 1) {
-                    if (header_state == READY_TO_REFRESH) {
-                        header_loading_view.setPadding(0, 0, 0, 0);
-                        ready_to_refresh.setVisibility(GONE);
-                        refreshing.setVisibility(VISIBLE);
-                        header_state = REFRESHING;
-                    } else
-                        header_state = ROLL_BACK;
-                    actAccordingState();
-                }
+                if (header_state == READY_TO_REFRESH) {
+                    header_loading_view.setPadding(0, 0, 0, 0);
+                    ready_to_refresh.setVisibility(GONE);
+                    refreshing.setVisibility(VISIBLE);
+                    header_state = REFRESHING;
+                } else
+                    header_state = ROLL_BACK;
+                actAccordingState();
                 if(isPrepared) {
                     footer_view.setPadding(0, 8, 0, 8);
                     if (onRefreshListener != null )
                         onRefreshListener.onFooterRefresh();
                 }
+                allow_refresh = 2;
                 break;
         }
         return super.onTouchEvent(event);
@@ -262,9 +271,9 @@ public class MyListView extends ListView implements AdapterView.OnItemClickListe
                 break;
             case ROLL_BACK:
                 header_loading_view.setPadding(0,-header_loading_view.getMeasuredHeight(),0,0);
-                one_refresh_a_time = 0;
                 begin_refresh.setVisibility(View.GONE);
                 header_state = DONE;
+                allow_refresh = 0;
                 break;
         case DONE:break;
         }

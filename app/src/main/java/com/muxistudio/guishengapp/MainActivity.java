@@ -133,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         registerReceiver(connectionReceiver, intentFilter);
+        CommentActivity.mainActivity  = this;
     }
 
 
@@ -247,7 +248,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         dos.writeBytes(jsonObject.toString());
                                         dos.flush();
                                         dos.close();
-                                        Log.i("here",conn.getResponseCode()+"");
                                         conn.disconnect();
                                         Message message = new Message();
                                         message.what = 6;
@@ -338,7 +338,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     dos.writeBytes(jsonObject.toString());
                                     dos.flush();
                                     dos.close();
-                                    Log.i("what", jsonObject.toString()+" ");
                                     try{
                                         Message message = new Message();
                                         message.what = 2;
@@ -436,8 +435,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Runnable runnable = new Runnable() {
                             @Override
                             public void run() {
-                                String token;
-                                String userid;
                                 try {
                                     String name_password= email+":"+password;
                                     URL url = new URL(Api.api+Api.token);
@@ -451,14 +448,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     String whole_data = HttpUtils.readInputStream(is);
                                     JSONObject object = new JSONObject(whole_data);
                                     //登陆成功后 取用户名和用户id信息 存在数据库里头
-                                    token = object.get("token").toString();
-                                    userid = object.get("id").toString();
-                                    Api.user_token = token;
-                                    Api.user_id = userid;
+                                    Api.user_token = object.get("token").toString();
+                                    Api.user_id = object.get("id").toString();
+                                    Log.i("what",Api.user_id+"\n"+object.toString());
                                     is.close();
                                     conn.disconnect();
-                                    if(userid!=null && !userid.equals(guiShengDao.getUserID(email))) {
-                                        String user_info = Api.api + Api.users + Integer.parseInt(userid);
+                                    if(Api.user_id!=null ) {
+                                        String user_info = Api.api + Api.users + Integer.parseInt(Api.user_id);
                                         url = new URL(user_info);
                                         conn = (HttpURLConnection) url.openConnection();
                                         conn.setRequestMethod("GET");
@@ -468,7 +464,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         is = conn.getInputStream();
                                         whole_data = HttpUtils.readInputStream(is);
                                         JSONObject jsonObject = new JSONObject(whole_data);
-                                        guiShengDao.insertUserInfo(email, userid, token, jsonObject.getString("username"), "");
+                                        guiShengDao.insertUserInfo(email, Api.user_id, Api.user_token, jsonObject.getString("username"), "");
                                         is.close();
                                         conn.disconnect();
                                     }
@@ -483,16 +479,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             if (!thread.isAlive())
                                 break;
                         }
-                        if(guiShengDao.getUserToken(email)!=null && Api.user_id!=null) {
+                        if(Api.user_id!=null) {//&& guiShengDao.getUserToken(email)!=null
                             drawerLayout.closeDrawers();
-                            toggle_wrapper.removeAllViews();
-                            toggle_wrapper.addView(lvMenu);
-                            Api.log_status = 1;
-                            user_headpic = (HeadpicImageView)lvMenu.findViewById(R.id.user_head_pic);
-                            TextView username = (TextView)lvMenu.findViewById(R.id.username);
-                            Api.logged_username = guiShengDao.getUserName(email);
-                            Api.logged_user_email = email;
-                            username.setText(Api.logged_username);
+                            changeToLogged(email);
                             dialog.dismiss();
                         }else{
                             Toast.makeText(MainActivity.this,"用户名或密码错误!",Toast.LENGTH_SHORT).show();
@@ -552,6 +541,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             default:Intent intent = new Intent(MainActivity.this,About.class);
                 startActivity(intent);
         }
+    }
+
+    public void changeToLogged(String email){
+        toggle_wrapper.removeAllViews();
+        toggle_wrapper.addView(lvMenu);
+        Api.log_status = 1;
+        user_headpic = (HeadpicImageView)lvMenu.findViewById(R.id.user_head_pic);
+        TextView username = (TextView)lvMenu.findViewById(R.id.username);
+        Api.logged_username = guiShengDao.getUserName(email);
+        Api.logged_user_email = email;
+        username.setText(Api.logged_username);
+
     }
 
     private void registerUser(){

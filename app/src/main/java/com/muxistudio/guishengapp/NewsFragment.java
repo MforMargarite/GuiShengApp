@@ -63,6 +63,8 @@ public class NewsFragment extends Fragment {
                         long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(getActivity()))
                             footer_refresh_state = new NetDataObtain(getContext()).DataRequireAppend(0);
+                        else
+                            footer_refresh_state = -1;
                         long endTime = System.currentTimeMillis();
                         if (endTime - beginTime < 2000)
                             try {

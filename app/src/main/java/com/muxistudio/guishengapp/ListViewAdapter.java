@@ -34,13 +34,11 @@ public class ListViewAdapter extends BaseAdapter {
     ViewHolder holder;
     ArrayList<HashMap<String, Object>> list;
     ImageLoad imageLoad;
-    int[] ImageLoaded;
 
     ListViewAdapter(Context context, ArrayList<HashMap<String, Object>> list) {
         this.context = context;
         this.list = list;
         imageLoad = new ImageLoad();
-        ImageLoaded = new int[list.size()];
     }
 
     class ViewHolder {
@@ -82,15 +80,12 @@ public class ListViewAdapter extends BaseAdapter {
         if (position < getCount()) {
             final HashMap<String, Object> map = list.get(position + 1);
             holder.title.setText(map.get(Api.title).toString());
-            holder.author.setText(map.get(Api.author).toString());
-            holder.timestamp.setText(map.get(Api.timestamp).toString());
+            holder.author.setText(map.get(Api.writer).toString());
+            holder.timestamp.setText(map.get(Api.date).toString());
             if (map.get(Api.image).toString().equals("null"))
                 holder.image.setVisibility(View.GONE);
             else {
-                if(ImageLoaded[position+1] == 0) {
-                    imageLoad.showImageByThread(holder.image, Api.image_api + map.get("image").toString());
-                    ImageLoaded[position+1]=1;
-                }
+                imageLoad.showImageByThread(holder.image, Api.image_api + map.get("image").toString());
             }
         }
         return convertView;

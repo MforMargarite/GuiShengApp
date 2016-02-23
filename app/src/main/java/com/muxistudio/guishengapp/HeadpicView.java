@@ -5,8 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PointF;
 import android.graphics.RectF;
 import android.net.Uri;
 import android.util.Log;
@@ -19,17 +17,17 @@ import java.io.InputStream;
 
 
 public class HeadpicView extends ImageView{
-    public Matrix matrix,current_matrix;
+    public Matrix matrix;
     ScaleGestureDetector multiplyTouchesListener;
     GestureDetector singleTouchListener;
     public int pic_width,pic_height;
     public int parent_width,parent_height;
-    int count,status;
-    float values[],points[];
+    float initTransX, initTransY,initScaleX,initScaleY;//初始化时保证图片包含圆形裁剪区
+    float values[];
     RectF srcRect,dstRect;
     public RectF circleRect;
     public static Bitmap bitmap;
-
+    int initTime = 0;
 
     public HeadpicView(Context context){
         super(context);
@@ -37,32 +35,16 @@ public class HeadpicView extends ImageView{
 
     public HeadpicView(Context context,Uri uri) {
         super(context);
-        count = 0;
-        status = 1;
         values = new float[9];
-        points = new float[4];
-        float scale=1;
         setLongClickable(true);
         multiplyTouchesListener = new ScaleGestureDetector(context, new MultiplyTouchesListener());
         singleTouchListener = new GestureDetector(context, new SingleTouchListener());
         try{
             InputStream is = context.getContentResolver().openInputStream(uri);
             BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(is, null, options);
-            is.close();
-            pic_width = options.outWidth;
-            pic_height = options.outHeight;
-            float size = (float)pic_width/800;
-            if(size<1f)
-                size = 1;
-            else
-                size = 2;
-            options.inSampleSize = (int)size;
             options.inJustDecodeBounds = false;
             options.inMutable = true;
-            is = context.getContentResolver().openInputStream(uri);
-            bitmap = BitmapFactory.decodeStream(is, null, options);
+            bitmap = BitmapFactory.decodeStream(is, null,options);
             pic_width = bitmap.getWidth();
             pic_height = bitmap.getHeight();
             is.close();
@@ -70,22 +52,35 @@ public class HeadpicView extends ImageView{
             e.printStackTrace();
         }
         matrix = new Matrix();
-        current_matrix = null;
         srcRect = new RectF(0,0,bitmap.getWidth(),bitmap.getHeight());
-        matrix.postTranslate((Api.screen_width-pic_width)/2,(Api.screen_height-pic_height)/2);
         dstRect = new RectF();
+        setScaleType(ScaleType.CENTER_INSIDE);
+        setImageBitmap(bitmap);
     }
 
     @Override
     public void onDraw(Canvas canvas) {
+        if (initTime != 0) {
             canvas.save();
             canvas.drawBitmap(bitmap, matrix, null);
             canvas.restore();
-            }
+        }else
+            super.onDraw(canvas);
+    }
 
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
+        if(initTime == 0){
+            initScaleX = pic_width>=480*Api.scale?1.0f:(float)480.0/pic_width;
+            initScaleY = pic_height>=480*Api.scale?1.0f:(float)480.0/pic_height;
+            matrix.setScale(initScaleX, initScaleY);
+            initTransX = (parent_width-pic_width)/2>(parent_width-480*Api.scale)/2?(parent_width-480*Api.scale)/2:(parent_width-pic_width)/2;
+            initTransY = (parent_height-pic_height)/2>(parent_height-480*Api.scale)/2?(parent_height-480*Api.scale)/2:(parent_height-pic_height)/2;
+            matrix.postTranslate(initTransX, initTransY);
+            initTime++;
+            invalidate();
+        }
         if(event.getPointerCount()>1)
             multiplyTouchesListener.onTouchEvent(event);
         else
@@ -106,13 +101,10 @@ public class HeadpicView extends ImageView{
                     offsetX = (float)((Api.screen_width-480*Api.scale)/ 2.0-dstRect.left);
                 else if(dstRect.right+offsetX<=(Api.screen_width+480*Api.scale)/ 2.0)
                     offsetX = (float)((Api.screen_width+480*Api.scale)/ 2.0 - dstRect.right);
-                Log.i("what","上下"+parent_height+" "+Api.scale+(parent_height-480*Api.scale)/ 2.0+" "+dstRect.top+" "+offsetY+" "+dstRect.bottom);
-                Log.i("what","左右"+(Api.screen_width-480*Api.scale)/ 2.0+" "+dstRect.left+" "+offsetX+" "+dstRect.right);
                 if(dstRect.top+offsetY>=(parent_height-480*Api.scale)/ 2.0)//上边线出界
-                    offsetY = (float)((parent_height-480*Api.scale)/ 2.0 -dstRect.top);
+                    offsetY = (float)((parent_height-480*Api.scale)/ 2.0 -dstRect.top)-1;
                 else if(dstRect.bottom+offsetY<=(parent_height+480*Api.scale)/ 2.0)
                     offsetY = (float)((parent_height+480*Api.scale)/ 2.0 - dstRect.bottom);
-                matrix.set(current_matrix);
                 matrix.postTranslate(offsetX, offsetY);
                 invalidate();
             }
@@ -129,10 +121,24 @@ public class HeadpicView extends ImageView{
         public boolean onDoubleTap(MotionEvent e) {
             if (double_tap_count == 0) {
                 matrix.postScale(2f, 2f, e.getX(), e.getY());
+                matrix.mapRect(dstRect,srcRect);
+                if(!dstRect.contains(circleRect)) {
+                   //设为初始状态
+                    matrix.reset();
+                    matrix.setScale(initScaleX,initScaleY);
+                    matrix.postTranslate(initTransX,initScaleY);
+                }
+                invalidate();
                 double_tap_count = 1;
             } else {
                 matrix.postScale(0.5f, 0.5f, e.getX(), e.getY());
-                current_matrix = matrix;
+                matrix.mapRect(dstRect, srcRect);
+                if(!dstRect.contains(circleRect)) {
+                    //设为初始状态
+                    matrix.reset();
+                    matrix.setScale(initScaleX,initScaleY);
+                    matrix.postTranslate(initTransX,initTransY);
+                }
                 double_tap_count = 0;
             }
             invalidate();
@@ -161,7 +167,6 @@ public class HeadpicView extends ImageView{
             if(!dstRect.contains(circleRect))
                matrix.postScale(1/scale_factor, 1/scale_factor, detector.getFocusX(), detector.getFocusY());
             invalidate();
-            current_matrix = matrix;
             return true;
         }
     }

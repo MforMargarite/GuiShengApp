@@ -29,14 +29,16 @@ import java.util.HashMap;
 import java.util.Locale;
 
 
-public class CommentScrollView extends ScrollView {
+public class CommentScrollView extends ScrollView {//记录当前加载到的评论id RequireAppend时可以继续加载 全局变量
     Context context;
     public View footer, footer_success_load, footer_fail_load, footer_is_newest;
-    int footer_tag = 0;
-    public int tab;
-    public int id;//滑动到底部加载
+    int footer_tag = 0;//加载标志
+    public int tab;//类型
+    public int id;//新闻/原创/灌水列表id
+    int current_num = 0;
+    int state = -1;
     public Handler handler;
-    public ArrayList<HashMap<String,Object>> comment_list = new ArrayList<>();
+    public ArrayList<HashMap<String,Object>> comment_list = new ArrayList<>();//当前所有加载评论
     boolean isPrepared = false;
     float touchDownY, instanceY;
     MyListView.OnRefreshListener onRefreshListener;
@@ -91,12 +93,12 @@ public class CommentScrollView extends ScrollView {
                         for(int i=0;i<request_length;i++) {
                             HashMap<String, Object> map = new HashMap<>();
                             JSONObject item = comment.getJSONObject(i);
-                            String stringDate = item.getString(Api.timestamp);
+                            String stringDate = item.getString(Api.date);
                             SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US);
                             try {
                                 Date date = sdf.parse(stringDate);
                                 sdf = new SimpleDateFormat("MM-dd", Locale.US);
-                                map.put(Api.timestamp, sdf.format(date));
+                                map.put(Api.date, sdf.format(date));
                             } catch (Exception e) {
                                 e.printStackTrace();
                             } finally {
@@ -105,6 +107,9 @@ public class CommentScrollView extends ScrollView {
                                 comment_list.add(map);
                             }
                         }
+                        current_num = comment_list.size();
+                        is.close();
+                        conn.disconnect();
                     }catch(Exception e){
                         e.printStackTrace();
                     }
@@ -150,6 +155,70 @@ public class CommentScrollView extends ScrollView {
         footer_success_load.setVisibility(GONE);
         footer_is_newest.setVisibility(VISIBLE);
 
+    }
+
+    public int appendComment(){
+        Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            URL url;
+            try{
+                switch (tab){
+                    case 0:url = new URL(Api.api+"news/"+id+"/"+Api.comments);
+                        break;
+                    case 1:url = new URL(Api.api+"origins/"+id+"/"+Api.comments);
+                        break;
+                    default:url = new URL(Api.api+"inter/"+id+"/"+Api.comments);
+                        break;
+                }
+                HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setDoInput(true);
+                conn.setUseCaches(false);
+                conn.connect();
+                InputStream is = conn.getInputStream();
+                String jsonString = HttpUtils.readInputStream(is);
+                JSONObject whole_data = new JSONObject(jsonString);
+                JSONArray comment = whole_data.getJSONArray("posts");
+                if(current_num<comment.length()) {
+                    int request_length=10;//一次加载条目数
+                    request_length = request_length>comment.length()-current_num?comment.length()-current_num:request_length;
+                    for (int i = 0; i < request_length; i++) {
+                        HashMap<String, Object> map = new HashMap<>();
+                        JSONObject item = comment.getJSONObject(current_num + i);
+                        String stringDate = item.getString(Api.date);
+                        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+                        try {
+                            Date date = sdf.parse(stringDate);
+                            sdf = new SimpleDateFormat("MM-dd", Locale.US);
+                            map.put(Api.date, sdf.format(date));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            map.put("author", item.get("author").toString());
+                            map.put("body", item.get("body").toString());
+                            comment_list.add(map);
+                        }
+                    }
+                    current_num = comment_list.size();
+                    state = 0;
+                }
+                else
+                    state = 1;
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            Message msg = new Message();
+            msg.what = 3;
+            handler.sendMessage(msg);
+        }
+    };
+       Thread thread = new Thread(runnable);
+        thread.start();
+        while(true)
+            if(!thread.isAlive())
+                break;
+        return state;
     }
 
     public void setFooter_fail_load() {

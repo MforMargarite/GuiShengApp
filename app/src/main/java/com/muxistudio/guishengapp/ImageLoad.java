@@ -3,6 +3,7 @@ package com.muxistudio.guishengapp;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Message;
 import android.util.LruCache;
@@ -33,12 +34,10 @@ public class ImageLoad {
                     break;
                 default:
                     bitmap = (Bitmap) msg.obj;
-                    imageView.setImageBitmap(bitmap);
-                    imageView.setMinimumHeight((int)((float) Api.screen_width / bitmap.getWidth()*bitmap.getHeight()));
                     matrix = new Matrix();
                     matrix.setScale((float) Api.screen_width / bitmap.getWidth(),(float) Api.screen_width / bitmap.getWidth() );
-                    imageView.setScaleType(ImageView.ScaleType.MATRIX);
-                    imageView.setImageMatrix(matrix);
+                    bitmap = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),matrix,true);
+                    imageView.setImageBitmap(bitmap);
                     break;
             }
         }
@@ -69,19 +68,21 @@ public class ImageLoad {
 
     public Bitmap getBitmap(String url){
         Bitmap bitmap = null;
-        InputStream is = null;
-        try{
-            URL myurl = new URL(url);
-            HttpURLConnection conn = (HttpURLConnection)myurl.openConnection();
-            conn.setDoInput(true);
-            conn.setUseCaches(false);
-            conn.connect();
-            is = conn.getInputStream();
-            bitmap = BitmapFactory.decodeStream(is);
-            is.close();
-            conn.disconnect();
-        }catch (Exception e){
-            e.printStackTrace();
+        InputStream is;
+        if(url!=null) {
+            try {
+                URL myurl = new URL(url);
+                HttpURLConnection conn = (HttpURLConnection) myurl.openConnection();
+                conn.setDoInput(true);
+                conn.setUseCaches(false);
+                conn.connect();
+                is = conn.getInputStream();
+                bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+                conn.disconnect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return bitmap;
     }

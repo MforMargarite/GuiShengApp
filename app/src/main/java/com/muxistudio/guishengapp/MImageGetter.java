@@ -36,7 +36,8 @@ public class MImageGetter implements Html.ImageGetter {
         @Override
         protected Drawable doInBackground(String... params) {
             Drawable load_drawable = null;
-            String url =Api.image_api+params[0];
+//          String url =Api.image_api+params[0];
+            String url = params[0];
             InputStream is;
             try{
                 is = new URL(url).openStream();

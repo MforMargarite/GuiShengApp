@@ -43,6 +43,7 @@ import java.util.Locale;
 public class subActivity extends AppCompatActivity implements View.OnTouchListener {
     HashMap<String, Object> map;
     ImageButton comment, like;
+    int footer_refresh_state;
     CommentListView commentListView;
     CommentScrollView commentScrollView;
     TextView sub_title,detail_author,detail_timestamp;
@@ -59,6 +60,8 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
         @Override
         public void handleMessage(Message msg){
             switch(msg.what){
+                case 2:footer_refresh_state = commentScrollView.appendComment();
+                    break;
                 case 3:
                     adapter = new SimpleAdapter(subActivity.this,commentScrollView.comment_list,R.layout.comment_listview_layout,new String[]{"author","timestamp","body"},new int[]{R.id.username,R.id.time,R.id.comment});
                     commentListView.setAdapter(adapter);
@@ -77,7 +80,6 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
         id = intent.getIntExtra("id", -1);
         tab = intent.getIntExtra("tab", -1);
         comment = (ImageButton) findViewById(R.id.comment);
-      //  getComment(tab, id);
         sub_title = (TextView) findViewById(R.id.sub_title);
         detail_author = (TextView) findViewById(R.id.detail_author);
         detail_timestamp = (TextView) findViewById(R.id.detail_time);
@@ -93,7 +95,6 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
             else
                 map = Api.interact_list.get(id - 1);
         }
-
 /*
         webView_body = (WebView)findViewById(R.id.webView_body);
         webView_body.getSettings().setJavaScriptEnabled(true);
@@ -106,12 +107,11 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
             }
         };
         webView_body.setWebViewClient(webViewClient);
-
 */
-        String bodyContent = map.get(Api.body).toString();
+        String bodyContent = map.get(Api.content).toString();
         String title = map.get(Api.title).toString();
-        String author = map.get(Api.author).toString();
-        String timestamp = map.get(Api.timestamp).toString();
+        String author = map.get(Api.writer).toString();
+        String timestamp = map.get(Api.date).toString();
         sub_title.setText(title);
         detail_author.setText(author);
         detail_timestamp.setText(timestamp);
@@ -119,7 +119,9 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
         textView_body.setClickable(true);
         textView_body.setMovementMethod(LinkMovementMethod.getInstance());
         textView_body.setText(Html.fromHtml(bodyContent, new MImageGetter(this, textView_body, Api.screen_width - 32), new MTagHandler(this)));
-       commentScrollView = (CommentScrollView) findViewById(R.id.comment_scrollview);
+
+
+        commentScrollView = (CommentScrollView) findViewById(R.id.comment_scrollview);
         RelativeLayout child = (RelativeLayout) commentScrollView.findViewById(R.id.child);
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.addRule(RelativeLayout.BELOW, R.id.comment_listview);
@@ -145,11 +147,16 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
             @Override
             public void onFooterRefresh() {
                 new AsyncTask<Void, Void, Void>() {
-                    int footer_refresh_state;
                     protected Void doInBackground(Void... params) {
                         long beginTime = System.currentTimeMillis();
                         if (NetDataObtain.isNetworkAvailable(subActivity.this))
-                            footer_refresh_state = new NetDataObtain(subActivity.this).DataRequireAppend(tab);
+                        {
+                            Message message = new Message();
+                            message.what = 2;
+                            handler.sendMessage(message);
+                        }
+                        else
+                            footer_refresh_state = -1;
                         long endTime = System.currentTimeMillis();
                         if (endTime - beginTime < 2000)
                             try {
@@ -169,7 +176,7 @@ public class subActivity extends AppCompatActivity implements View.OnTouchListen
                         new AsyncTask<Void, Void, Void>() {
                             protected Void doInBackground(Void... params) {
                                 try {
-                                    Thread.sleep(1100);
+                                    Thread.sleep(500);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }

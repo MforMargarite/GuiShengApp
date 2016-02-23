@@ -23,10 +23,10 @@ public class Api {
     public static String logged_user_email;
     public static final String avatar_root = "7xq66c.com1.z0.glb.clouddn.com/";
     public static String user_jsonString;
-    public static final String author="author";
-    public static final String body = "body";
+    public static final String writer ="writer";
+    public static final String content = "content";
     public static final String comments = "comments";
-    public static final String timestamp = "timestamp";
+    public static final String date = "date";
     public static final String title = "title";
     public static final String image = "image";
     public static int news_current_id = 0;
